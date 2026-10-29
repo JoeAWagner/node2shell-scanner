@@ -38,6 +38,31 @@ List what checks exist:
 n2scan --list-checks
 ```
 
+## Host-side sweep over SSH (`n2scan-ssh`) — the reliable verdict
+
+Remote HTTP checks rarely see the Node version. This fans out one read-only
+command — `node --version` — across your host list over your **system `ssh`**
+(your keys/agent/`~/.ssh/config`; no credentials stored) and reports patch
+status per host.
+
+```bash
+n2scan-ssh hosts.csv
+n2scan-ssh hosts.csv --user secops -i ~/.ssh/fleet --concurrency 25
+n2scan-ssh hosts.csv --format csv -o reports/node-versions.csv
+# accept new host keys non-interactively:
+n2scan-ssh hosts.csv -o StrictHostKeyChecking=accept-new
+```
+
+- Non-destructive: runs one version command; never installs/restarts anything.
+- `BatchMode` is on by default so a host can't hang on a prompt (`--ask` to allow prompts).
+- Wraps the command in `sh -lc` so nvm/profile PATH is sourced (`--no-login-shell` to skip).
+- Cleanly separates **vulnerable** / **patched** / **no node on host** / **ssh error**.
+- Limitation (v1): checks the `node` on the login PATH. Hosts with multiple Node
+  installs (nvm, containers, a service pinned to its own build) may run a
+  different binary — confirm service-specific builds separately.
+
+Exit-code helper for a single host (e.g. in config management): `python -m n2scan.local`.
+
 ## Input formats
 
 - **CSV/TSV with a header** — a column named one of `url, host, hostname,

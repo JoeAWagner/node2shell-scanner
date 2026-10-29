@@ -15,6 +15,7 @@ dev = [
 
 [project.scripts]
 n2scan = "n2scan.cli:main"
+n2scan-ssh = "n2scan.sshcli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
