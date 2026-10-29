@@ -1,0 +1,24 @@
+[project]
+name = "n2scan"
+version = "0.1.0"
+description = "Detect-and-report scanner for a list of SBU-owned web properties (authorized internal use)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+n2scan = "n2scan.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["n2scan*"]
