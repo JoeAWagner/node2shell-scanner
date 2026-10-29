@@ -6,7 +6,7 @@ is read-only HTTP from the checks' point of view.
 
 Internal fleets commonly use self-signed / private-CA certs, so by default we
 verify TLS but transparently retry a cert-verification failure without
-verification (recording that it didn't validate) — see n2scan.http.Fetcher.
+verification (recording that it didn't validate) — see n2scan.fetch.Fetcher.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from collections.abc import Iterable
 import httpx
 
 from n2scan.checks.base import Check, Finding, Status
-from n2scan.http import Fetcher
+from n2scan.fetch import Fetcher
 from n2scan.targets import Target
 
 DEFAULT_CONCURRENCY = 10

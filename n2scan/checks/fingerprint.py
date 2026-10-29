@@ -12,7 +12,7 @@ from __future__ import annotations
 import httpx
 
 from n2scan.checks.base import Check, Finding, Severity, Status
-from n2scan.http import Fetcher, classify_error
+from n2scan.fetch import Fetcher, classify_error
 from n2scan.targets import Target
 
 

@@ -1,6 +1,6 @@
 import httpx
 
-from n2scan.http import classify_error, is_tls_verify_error
+from n2scan.fetch import classify_error, is_tls_verify_error
 from n2scan.targets import Target
 
 

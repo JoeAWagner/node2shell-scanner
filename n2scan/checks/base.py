@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Protocol
 from n2scan.targets import Target
 
 if TYPE_CHECKING:
-    from n2scan.http import Fetcher
+    from n2scan.fetch import Fetcher
 
 
 class Severity(enum.StrEnum):
