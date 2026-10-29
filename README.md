@@ -50,10 +50,29 @@ Bare hosts get `https://` added automatically. Targets are de-duplicated by host
 
 ## Checks
 
-| name | what it does |
-|---|---|
-| `fingerprint` | Single benign GET; records `Server` / `X-Powered-By` banners. Flags Node/Express front doors. |
-| `node2shell` | Detects exposure to **CVE-2026-111497** (see below). Non-destructive version/behaviour check. |
+| name | default | what it does |
+|---|---|---|
+| `fingerprint` | yes | Single benign GET; records `Server` / `X-Powered-By` banners and TLS trust. Flags Node/Express front doors. |
+| `node2shell` | yes | Detects exposure to **CVE-2026-111497** by parsing a leaked Node version. Reads headers only — sends no Brotli. |
+| `brotli-reach` | **opt-in** | Sends a **valid** Brotli request body to infer whether the Brotli *decode path* is reachable (attack surface). Never sends malformed data, so it can't trigger the bug. A positive is a prioritization signal, **not** proof of vulnerability — confirm with `node --version`. Issues a POST, so it's off by default. |
+
+```bash
+# opt in to the reachability probe (POSTs to / by default)
+n2scan targets.csv --check node2shell --check brotli-reach
+n2scan targets.csv --check brotli-reach --brotli-path /api/upload
+```
+
+### What actually confirms patch status
+
+Because the fix is in the compiled Node binary, the only reliable vulnerable/patched
+verdict comes from the version on the host:
+
+```bash
+python -m n2scan.local            # checks `node --version` vs the fixed releases
+```
+
+The remote checks (`node2shell`, `brotli-reach`) help you *find and prioritize* hosts;
+`n2scan.local` gives the verdict.
 
 Each finding has a status: `vulnerable`, `not_vulnerable`, `inconclusive`, or
 `error`, plus the evidence behind it.

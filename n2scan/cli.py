@@ -14,7 +14,8 @@ import sys
 from pathlib import Path
 
 from n2scan import __version__
-from n2scan.checks import ALL_CHECKS
+from n2scan.checks import ALL_CHECKS, DEFAULT_CHECK_NAMES
+from n2scan.checks.brotli_reach import BrotliReachabilityCheck
 from n2scan.report import print_summary, to_csv, to_json
 from n2scan.scanner import DEFAULT_CONCURRENCY, DEFAULT_TIMEOUT, scan
 from n2scan.targets import load_targets
@@ -34,7 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--check",
         action="append",
         choices=sorted(ALL_CHECKS),
-        help="Check(s) to run. Repeatable. Default: all.",
+        help=f"Check(s) to run. Repeatable. Default: {', '.join(DEFAULT_CHECK_NAMES)}.",
+    )
+    p.add_argument(
+        "--brotli-path",
+        default="/",
+        help="Path the opt-in brotli-reach probe POSTs to (default: /).",
     )
     p.add_argument("--format", choices=("summary", "json", "csv"), default="summary")
     p.add_argument("-o", "--output", help="Write the report here instead of stdout.")
@@ -55,7 +61,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.list_checks:
         for name, check in sorted(ALL_CHECKS.items()):
-            print(f"{name:<14} {check.description}")
+            default_mark = " (default)" if name in DEFAULT_CHECK_NAMES else ""
+            print(f"{name:<14}{default_mark:<10} {check.description}")
         return 0
 
     if not args.targets:
@@ -67,7 +74,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"No targets parsed from {args.targets}", file=sys.stderr)
         return 2
 
-    selected = [ALL_CHECKS[name] for name in (args.check or sorted(ALL_CHECKS))]
+    names = args.check or list(DEFAULT_CHECK_NAMES)
+    selected = []
+    for name in names:
+        if name == "brotli-reach":
+            # rebuild with the chosen probe path
+            selected.append(BrotliReachabilityCheck(args.brotli_path))
+        else:
+            selected.append(ALL_CHECKS[name])
     print(
         f"Scanning {len(targets)} target(s) with {len(selected)} check(s): "
         f"{', '.join(c.name for c in selected)}",

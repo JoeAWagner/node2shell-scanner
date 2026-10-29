@@ -75,26 +75,28 @@ class Fetcher:
         self._insecure = insecure
         self._verify_default = verify_default
 
-    async def get(self, target: Target, method: str = "GET") -> FetchResult:
+    async def get(self, target: Target, method: str = "GET", **kwargs) -> FetchResult:
+        """Fetch target, applying the TLS fallback. Extra kwargs (headers,
+        content, ...) are forwarded to httpx.AsyncClient.request."""
         last_exc: Exception | None = None
         for url in target.candidate_urls():
             # When verification is globally off, there's only the insecure client.
             if not self._verify_default and self._insecure is not None:
                 try:
-                    resp = await self._insecure.request(method, url)
+                    resp = await self._insecure.request(method, url, **kwargs)
                     return FetchResult(resp, url, tls_verified=False)
                 except httpx.HTTPError as exc:
                     last_exc = exc
                     continue
 
             try:
-                resp = await self._secure.request(method, url)
+                resp = await self._secure.request(method, url, **kwargs)
                 return FetchResult(resp, url, tls_verified=True)
             except httpx.HTTPError as exc:
                 last_exc = exc
                 if is_tls_verify_error(exc) and self._insecure is not None:
                     try:
-                        resp = await self._insecure.request(method, url)
+                        resp = await self._insecure.request(method, url, **kwargs)
                         return FetchResult(resp, url, tls_verified=False)
                     except httpx.HTTPError as exc2:
                         last_exc = exc2
