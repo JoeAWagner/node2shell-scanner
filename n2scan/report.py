@@ -32,11 +32,30 @@ def to_csv(findings: list[Finding]) -> str:
 def print_summary(findings: list[Finding], stream=sys.stdout) -> None:
     by_status: Counter[str] = Counter(f.status for f in findings)
     vulnerable = [f for f in findings if f.status == Status.VULNERABLE]
+    error_kinds: Counter[str] = Counter(
+        f.detail.get("error_kind", "unknown") for f in findings if f.status == Status.ERROR
+    )
+    tls_unverified = {
+        f.target for f in findings if f.detail.get("tls_verified") is False
+    }
 
     print("\n=== n2scan summary ===", file=stream)
     for status in Status:
         if by_status.get(status):
             print(f"  {status:<16} {by_status[status]}", file=stream)
+
+    if error_kinds:
+        print("\n  Errors by kind:", file=stream)
+        for kind, n in error_kinds.most_common():
+            hint = "  (try --no-verify-tls)" if kind == "tls-verify" else ""
+            print(f"    {kind:<14} {n}{hint}", file=stream)
+
+    if tls_unverified:
+        print(
+            f"\n  {len(tls_unverified)} host(s) reached only with an untrusted cert "
+            "(self-signed/expired/private CA).",
+            file=stream,
+        )
 
     if vulnerable:
         print("\n  Needs patching:", file=stream)

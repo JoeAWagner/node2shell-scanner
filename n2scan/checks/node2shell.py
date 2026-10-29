@@ -17,6 +17,7 @@ from __future__ import annotations
 import httpx
 
 from n2scan.checks.base import Check, Finding, Severity, Status
+from n2scan.http import Fetcher, classify_error
 from n2scan.targets import Target
 from n2scan.versions import node_patch_status, parse_version
 
@@ -31,16 +32,18 @@ class Node2ShellCheck(Check):
     name = "node2shell"
     description = f"Detects {CVE} (Node2Shell) via leaked Node version; non-destructive."
 
-    async def run(self, client: httpx.AsyncClient, target: Target) -> Finding:
+    async def run(self, fetcher: Fetcher, target: Target) -> Finding:
         try:
-            resp = await client.get(target.url)
+            fr = await fetcher.get(target)
         except httpx.HTTPError as exc:
             return Finding(
                 target=target.host,
                 check=self.name,
                 status=Status.ERROR,
-                evidence=f"request failed: {exc.__class__.__name__}: {exc}",
+                evidence=f"request failed ({classify_error(exc)}): {exc}",
+                detail={"error_kind": classify_error(exc)},
             )
+        resp = fr.response
 
         # Look for a "node/x.y.z" style banner in the usual headers.
         node_version: tuple[int, int, int] | None = None
@@ -58,6 +61,8 @@ class Node2ShellCheck(Check):
             "status_code": resp.status_code,
             "x_powered_by": resp.headers.get("x-powered-by", ""),
             "server": resp.headers.get("server", ""),
+            "used_url": fr.used_url,
+            "tls_verified": fr.tls_verified,
         }
 
         if node_version is None:

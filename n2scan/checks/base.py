@@ -12,11 +12,12 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from typing import Protocol
-
-import httpx
+from typing import TYPE_CHECKING, Protocol
 
 from n2scan.targets import Target
+
+if TYPE_CHECKING:
+    from n2scan.http import Fetcher
 
 
 class Severity(enum.StrEnum):
@@ -50,5 +51,5 @@ class Check(Protocol):
     name: str
     description: str
 
-    async def run(self, client: httpx.AsyncClient, target: Target) -> Finding:
+    async def run(self, fetcher: "Fetcher", target: Target) -> Finding:
         ...

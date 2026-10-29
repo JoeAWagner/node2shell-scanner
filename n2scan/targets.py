@@ -31,23 +31,37 @@ class Target:
     raw: str
     url: str
     host: str
+    scheme_explicit: bool = True
     meta: dict[str, str] = field(default_factory=dict)
 
+    def candidate_urls(self) -> list[str]:
+        """URLs to try, in order.
 
-def _normalize(raw: str) -> tuple[str, str]:
-    """Return (url, host) for a raw cell value.
+        When the sheet gave a bare host we try https first, then http, so a
+        host that only speaks plain HTTP still gets scanned. When the sheet
+        specified a scheme we honour it exactly.
+        """
+        if self.scheme_explicit:
+            return [self.url]
+        return [f"https://{self.host}", f"http://{self.host}"]
 
-    Adds an https:// scheme if none is present so httpx has something to fetch.
+
+def _normalize(raw: str) -> tuple[str, str, bool]:
+    """Return (url, host, scheme_explicit) for a raw cell value.
+
+    Adds an https:// scheme if none is present so httpx has something to fetch,
+    and reports whether the caller specified the scheme themselves.
     """
     value = raw.strip()
     if not value:
         raise ValueError("empty target")
-    if "://" not in value:
+    explicit = "://" in value
+    if not explicit:
         value = "https://" + value
     parsed = urlparse(value)
     if not parsed.hostname:
         raise ValueError(f"could not parse a host out of {raw!r}")
-    return value, parsed.hostname
+    return value, parsed.hostname, explicit
 
 
 def _looks_like_header(row: list[str]) -> bool:
@@ -91,7 +105,7 @@ def load_targets(path: str | Path) -> list[Target]:
         if not cell.strip():
             continue
         try:
-            url, host = _normalize(cell)
+            url, host, explicit = _normalize(cell)
         except ValueError:
             continue
         if host in seen:
@@ -102,7 +116,9 @@ def load_targets(path: str | Path) -> list[Target]:
             for i, name in enumerate(header):
                 if i != col and i < len(row):
                     meta[name.strip()] = row[i].strip()
-        targets.append(Target(raw=cell.strip(), url=url, host=host, meta=meta))
+        targets.append(
+            Target(raw=cell.strip(), url=url, host=host, scheme_explicit=explicit, meta=meta)
+        )
     return targets
 
 
